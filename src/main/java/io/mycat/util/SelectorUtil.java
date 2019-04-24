@@ -17,7 +17,7 @@ public class SelectorUtil {
     private static final Logger logger = LoggerFactory.getLogger(SelectorUtil.class);
 
     public static final int REBUILD_COUNT_THRESHOLD = 512;
-
+    // 0.5 ms
     public static final long MIN_SELECT_TIME_IN_NANO_SECONDS = 500000L;
 
     public static Selector rebuildSelector(final Selector oldSelector) throws IOException {
@@ -35,11 +35,13 @@ public class SelectorUtil {
                 for (SelectionKey key: oldSelector.keys()) {
                     Object a = key.attachment();
                     try {
+                        // 如果老的Selector的事件是有效的，则将事件注册到新的Selector上
                         if (!key.isValid() || key.channel().keyFor(newSelector) != null) {
                             continue;
                         }
                         int interestOps = key.interestOps();
                         key.cancel();
+                        // 将新的Selector绑定到server socket channel上
                         key.channel().register(newSelector, interestOps, a);
                         nChannels ++;
                     } catch (Exception e) {

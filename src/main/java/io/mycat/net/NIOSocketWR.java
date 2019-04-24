@@ -24,6 +24,7 @@ public class NIOSocketWR extends SocketWR {
 
 	public void register(Selector selector) throws IOException {
 		try {
+			 // 监听READ事件
 			processKey = channel.register(selector, SelectionKey.OP_READ, con);
 		} finally {
 			if (con.isClosed.get()) {

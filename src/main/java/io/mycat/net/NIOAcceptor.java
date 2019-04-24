@@ -2,8 +2,8 @@
  * Copyright (c) 2013, OpenCloudDB/MyCAT and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- * This code is free software;Designed and Developed mainly by many Chinese 
- * opensource volunteers. you can redistribute it and/or modify it under the 
+ * This code is free software;Designed and Developed mainly by many Chinese
+ * opensource volunteers. you can redistribute it and/or modify it under the
  * terms of the GNU General Public License version 2 only, as published by the
  * Free Software Foundation.
  *
@@ -16,8 +16,8 @@
  * You should have received a copy of the GNU General Public License version
  * 2 along with this work; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
- * 
- * Any questions about this component can be directed to it's project Web address 
+ *
+ * Any questions about this component can be directed to it's project Web address
  * https://code.google.com/p/opencloudb/.
  *
  */
@@ -53,7 +53,7 @@ public final class NIOAcceptor extends Thread implements SocketAcceptor{
 	private long acceptCount;
 	private final NIOReactorPool reactorPool;
 
-	public NIOAcceptor(String name, String bindIp,int port, 
+	public NIOAcceptor(String name, String bindIp,int port,
 			FrontendConnectionFactory factory, NIOReactorPool reactorPool)
 			throws IOException {
 		super.setName(name);
@@ -87,9 +87,12 @@ public final class NIOAcceptor extends Thread implements SocketAcceptor{
 			++acceptCount;
 			try {
 				long start = System.nanoTime();
+                //最长阻塞1000ms，阻塞等待注册的事件
 			    tSelector.select(1000L);
 				long end = System.nanoTime();
+                // 获取注册的事件
 				Set<SelectionKey> keys = tSelector.selectedKeys();
+                // 注册事件数为0 且阻塞时间小于0.5ms 则校验Select数加一
 				if (keys.size() == 0 && (end - start) < SelectorUtil.MIN_SELECT_TIME_IN_NANO_SECONDS )
 				{
 					invalidSelectCount++;
@@ -98,6 +101,7 @@ public final class NIOAcceptor extends Thread implements SocketAcceptor{
                 {
 					try {
 						for (SelectionKey key : keys) {
+                            // 事件已就绪
 							if (key.isValid() && key.isAcceptable()) {
 								accept();
 							} else {
@@ -109,6 +113,7 @@ public final class NIOAcceptor extends Thread implements SocketAcceptor{
 						invalidSelectCount = 0;
 					}
 				}
+                // 连续校验Select失败数大于512次则重建Selector
 				if (invalidSelectCount > SelectorUtil.REBUILD_COUNT_THRESHOLD)
 				{
 					final Selector rebuildSelector = SelectorUtil.rebuildSelector(this.selector);
@@ -127,15 +132,17 @@ public final class NIOAcceptor extends Thread implements SocketAcceptor{
 	private void accept() {
 		SocketChannel channel = null;
 		try {
+            // 获取新连接 SocketChannel
 			channel = serverChannel.accept();
 			channel.configureBlocking(false);
 			FrontendConnection c = factory.make(channel);
 			c.setAccepted(true);
 			c.setId(ID_GENERATOR.getId());
+            // 设置NIO处理器，轮询方式
 			NIOProcessor processor = (NIOProcessor) MycatServer.getInstance()
 					.nextProcessor();
 			c.setProcessor(processor);
-			
+
 			NIOReactor reactor = reactorPool.getNextReactor();
 			reactor.postRegister(c);
 
@@ -166,7 +173,7 @@ public final class NIOAcceptor extends Thread implements SocketAcceptor{
 
 	/**
 	 * 前端连接ID生成器
-	 * 
+	 *
 	 * @author mycat
 	 */
 	private static class AcceptIdGenerator {
